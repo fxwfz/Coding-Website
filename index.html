@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logger and Discord Bot Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        #log-output, #file-preview {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Logger and Discord Bot Preview</h1>
+        <button id="generate-logs">Generate Logs</button>
+        <button id="show-logger">Show logger.js</button>
+        <button id="show-index">Show index.js</button>
+        <div id="log-output"></div>
+        <h2 id="file-title"></h2>
+        <div id="file-preview"></div>
+    </div>
+
+    <script>
+        // Logger implementation
+        const Logger = (function() {
+            function formatDate(date) {
+                return date.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+            }
+
+            function colorize(text, color) {
+                return `<span style="color: ${color};">${text}</span>`;
+            }
+
+            const levels = {
+                info: 'blue',
+                warn: 'yellow',
+                error: 'red',
+                debug: 'green'
+            };
+
+            function log(level, message) {
+                const color = levels[level] || 'white';
+                const timestamp = formatDate(new Date());
+                return `${colorize(timestamp, 'gray')} ${colorize(level.toUpperCase(), color)}: ${message}`;
+            }
+
+            return {
+                info: message => log('info', message),
+                warn: message => log('warn', message),
+                error: message => log('error', message),
+                debug: message => log('debug', message)
+            };
+        })();
+
+        // File contents
+        const loggerJs = `const chalk = require('chalk');
+
+class Logger {
+  constructor() {
+    this.levels = {
+      info: chalk.blue,
+      warn: chalk.yellow,
+      error: chalk.red,
+      debug: chalk.green
+    };
+  }
+
+  formatDate(date) {
+    return date.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  }
+
+  log(level, message) {
+    const colorize = this.levels[level] || chalk.white;
+    const timestamp = this.formatDate(new Date());
+    console.log(\`\${chalk.gray(timestamp)} \${colorize(level.toUpperCase())}: \${message}\`);
+  }
+
+  info(message) {
+    this.log('info', message);
+  }
+
+  warn(message) {
+    this.log('warn', message);
+  }
+
+  error(message) {
+    this.log('error', message);
+  }
+
+  debug(message) {
+    this.log('debug', message);
+  }
+}
+
+module.exports = new Logger();`;
+
+        const indexJs = `const { Client, GatewayIntentBits } = require('discord.js');
+const logger = require('./logger');
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ]
+});
+
+const prefix = '!';
+
+client.once('ready', () => {
+  logger.info(\`Logged in as \${client.user.tag}!\`);
+  client.user.setPresence({
+    activities: [{ name: 'with Discord.js', type: 'PLAYING' }],
+    status: 'online',
+  });
+});
+
+client.on('messageCreate', (message) => {
+  if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+  const args = message.content.slice(prefix.length).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
+
+  if (command === 'ping') {
+    message.reply('Pong!');
+    logger.info(\`Responded to ping command from \${message.author.tag}\`);
+  }
+});
+
+client.login('YOUR_BOT_TOKEN');`;
+
+        // DOM elements
+        const generateButton = document.getElementById('generate-logs');
+        const showLoggerButton = document.getElementById('show-logger');
+        const showIndexButton = document.getElementById('show-index');
+        const logOutput = document.getElementById('log-output');
+        const filePreview = document.getElementById('file-preview');
+        const fileTitle = document.getElementById('file-title');
+
+        // Function to append log messages to the output
+        function appendLog(message) {
+            logOutput.innerHTML += message + '<br>';
+        }
+
+        // Event listener for the generate button
+        generateButton.addEventListener('click', () => {
+            // Clear previous logs
+            logOutput.innerHTML = '';
+
+            // Generate log messages
+            appendLog(Logger.info('Bot is starting...'));
+            appendLog(Logger.debug('Initializing client...'));
+            appendLog(Logger.info('Logged in as DiscordBot#1234'));
+            appendLog(Logger.warn('Rate limit approaching for API calls'));
+            appendLog(Logger.error('Failed to connect to voice channel'));
+            appendLog(Logger.info('Responded to ping command from User#5678'));
+        });
+
+        // Event listener for showing logger.js
+        showLoggerButton.addEventListener('click', () => {
+            fileTitle.textContent = 'logger.js';
+            filePreview.textContent = loggerJs;
+        });
+
+        // Event listener for showing index.js
+        showIndexButton.addEventListener('click', () => {
+            fileTitle.textContent = 'index.js';
+            filePreview.textContent = indexJs;
+        });
+    </script>
+</body>
+</html>
